@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# FitForge docker-compose.yml
+#
+# Two services:
+#   app      — the Next.js app (production image from Dockerfile)
+#   postgres — a LOCAL PostgreSQL for development only (not used on Vercel)
+#
+# Usage:
+#   Start both:          docker compose up
+#   App only (Supabase): docker compose up app
+#   Stop everything:     docker compose down
+#   Remove volumes too:  docker compose down -v
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+
+  # ── Next.js Application ────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Build the final "run" stage
+      target: run
+    container_name: fitforge-app
+    ports:
+      - "3000:3000"                # http://localhost:3000
+    # Load secrets from your local .env file (never committed to git)
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy  # Wait until Postgres is ready
+    restart: unless-stopped
+    # Use the same health check endpoint defined in the Dockerfile
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  # ── Local PostgreSQL (development only) ────────────────────────────────────
+  # This replaces Supabase when you want to run everything 100% locally.
+  # To use it: set DATABASE_URL=postgresql://fitforge:fitforge@postgres:5432/fitforge
+  # in your .env file, then run: docker compose up
+  postgres:
+    image: postgres:16-alpine
+    container_name: fitforge-postgres
+    environment:
+      POSTGRES_USER:     fitforge
+      POSTGRES_PASSWORD: fitforge         # Change this for any real server
+      POSTGRES_DB:       fitforge
+    ports:
+      - "5433:5432"    # Exposed on 5433 to avoid clashing with a local Postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # Persist data across restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Profiles let you start Postgres only when you explicitly ask for it:
+    #   docker compose --profile local-db up
+    # Remove the profile block if you always want Postgres to start.
+    profiles:
+      - local-db
+
+volumes:
+  postgres_data:

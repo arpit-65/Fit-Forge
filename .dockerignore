@@ -1,0 +1,46 @@
+# Docker build context — files/folders to EXCLUDE from the image.
+# Keep this list: a smaller build context = faster docker build times.
+
+# Dependencies (re-installed inside Docker via npm ci)
+node_modules
+
+# Next.js build output (rebuilt inside Docker)
+.next
+out
+
+# Local environment files — NEVER put secrets in the image
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+
+# Git history (not needed in the image)
+.git
+.gitignore
+
+# Editor configs
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test and development tools
+coverage
+*.test.ts
+*.test.tsx
+__tests__
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Readme and docs (not needed at runtime)
+README.md
+CHANGELOG.md
+
+# Scratch / development-only files
+scratch

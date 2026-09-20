@@ -1,0 +1,281 @@
+// Prisma schema for FitForge — SIH PS 26196
+// Campus Fitness Dropout Prevention Platform
+
+generator client {
+  provider      = "prisma-client-js"
+  // "native" covers your dev machine (Windows/Mac/Linux glibc)
+  // "linux-musl-openssl-3.0.x" covers Alpine Linux used in Docker
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────
+enum RiskBand {
+  LOW
+  MID
+  HIGH
+}
+
+enum InterventionType {
+  NUDGE
+  SQUAD_NUDGE
+  GOAL_DOWNGRADE
+  MENTOR_CHECKIN
+}
+
+enum ChallengeStatus {
+  ACTIVE
+  COMPLETED
+  DOWNGRADED
+  EXPIRED
+}
+
+// ─── College ──────────────────────────────────────────────────────
+model College {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  users   User[]
+  squads  Squad[]
+  leagues League[]
+
+  @@map("colleges")
+}
+
+// ─── User (Student / Athlete) ─────────────────────────────────────
+model User {
+  id         String   @id @default(cuid())
+  authId     String?  @unique // Supabase auth UID
+  email      String   @unique
+  name       String
+  rollNo     String?  @unique
+  department String?
+  year       Int?     // 1–4
+  avatarUrl  String?
+  collegeId  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  college           College?               @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  squadMemberships  SquadMember[]
+  activities        Activity[]
+  challenges        ChallengeParticipant[]
+  riskScores        RiskScore[]
+  interventions     Intervention[]
+  pointsLedger      PointsLedger[]
+  streak            Streak?
+  badges            Badge[]
+  leagueMemberships LeagueMember[]
+
+  @@map("users")
+}
+
+// ─── Squad ────────────────────────────────────────────────────────
+model Squad {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  avatarUrl   String?
+  collegeId   String?
+  maxSize     Int      @default(10)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  college    College?         @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  members    SquadMember[]
+  challenges SquadChallenge[]
+
+  @@map("squads")
+}
+
+model SquadMember {
+  userId   String
+  squadId  String
+  role     String   @default("member") // "leader" | "member"
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@id([userId, squadId])
+  @@unique([squadId, userId])
+  @@map("squad_members")
+}
+
+// ─── Activity ─────────────────────────────────────────────────────
+model Activity {
+  id              String   @id @default(cuid())
+  userId          String
+  type            String   // "gym" | "run" | "hiit" | "yoga" | "sport" | "swim" | "walk"
+  durationMinutes Int
+  date            DateTime @default(now())
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@map("activities")
+}
+
+// ─── Challenge ────────────────────────────────────────────────────
+model Challenge {
+  id                    String          @id @default(cuid())
+  title                 String
+  description           String
+  targetMinutes         Int
+  originalTargetMinutes Int?            // Set when goal is downgraded
+  status                ChallengeStatus @default(ACTIVE)
+  dueDate               DateTime
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  participants ChallengeParticipant[]
+  squads       SquadChallenge[]
+
+  @@map("challenges")
+}
+
+model ChallengeParticipant {
+  userId        String
+  challengeId   String
+  minutesLogged Int             @default(0)
+  status        ChallengeStatus @default(ACTIVE)
+  completed     Boolean         @default(false)
+  joinedAt      DateTime        @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, challengeId])
+  @@map("challenge_participants")
+}
+
+model SquadChallenge {
+  squadId     String
+  challengeId String
+
+  squad     Squad     @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@id([squadId, challengeId])
+  @@map("squad_challenges")
+}
+
+// ─── RiskScore ────────────────────────────────────────────────────
+model RiskScore {
+  id              String   @id @default(cuid())
+  userId          String
+  score           Float    // 0.0 to 1.0 (0 = lowest risk, 1.0 = highest risk)
+  band            RiskBand // LOW | MID | HIGH
+  topReason       String
+  bootstrapActive Boolean  @default(false)
+  computedAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, computedAt])
+  @@map("risk_scores")
+}
+
+// ─── Intervention ─────────────────────────────────────────────────
+model Intervention {
+  id         String           @id @default(cuid())
+  userId     String
+  type       InterventionType // NUDGE | SQUAD_NUDGE | GOAL_DOWNGRADE | MENTOR_CHECKIN
+  message    String
+  firedAt    DateTime         @default(now())
+  resolvedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, firedAt])
+  @@map("interventions")
+}
+
+// ─── PointsLedger ─────────────────────────────────────────────────
+model PointsLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  points    Int
+  reason    String
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@map("points_ledger")
+}
+
+// ─── Streak ───────────────────────────────────────────────────────
+model Streak {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastActiveDate DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lastActiveDate])
+  @@map("streaks")
+}
+
+// ─── Badge ────────────────────────────────────────────────────────
+model Badge {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String
+  icon        String
+  earnedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, earnedAt])
+  @@map("badges")
+}
+
+// ─── League & LeagueMember ────────────────────────────────────────
+model League {
+  id        String   @id @default(cuid())
+  collegeId String
+  name      String
+  tier      String   // "Bronze" | "Silver" | "Gold" | "Elite"
+  season    String
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+
+  college College        @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  members LeagueMember[]
+
+  @@map("leagues")
+}
+
+model LeagueMember {
+  id       String   @id @default(cuid())
+  leagueId String
+  userId   String
+  points   Int      @default(0)
+  rank     Int?
+  joinedAt DateTime @default(now())
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, userId])
+  @@index([userId, joinedAt])
+  @@map("league_members")
+}
