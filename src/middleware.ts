@@ -46,9 +46,13 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Public paths — landing, analytics dashboard, squads, challenges, auth pages, and all API endpoints
+  // Public paths — landing, athlete dashboard, interactive modules, analytics, squads, challenges, auth pages, and all API endpoints
   const isPublic =
     pathname === "/" ||
+    pathname === "/dashboard" ||
+    pathname === "/workout" ||
+    pathname === "/train" ||
+    pathname === "/session" ||
     pathname === "/analytics" ||
     pathname === "/squads" ||
     pathname.startsWith("/squads/") ||
@@ -58,11 +62,15 @@ export async function middleware(request: NextRequest) {
     pathname === "/register" ||
     pathname.startsWith("/api/");
 
-  // Redirect unauthenticated users away from protected web app pages (e.g. /dashboard, /admin)
+  // Redirect unauthenticated users away from protected administrative pages (e.g. /admin)
   // Only enforce redirect if user is definitely absent AND it's not a public or API route
   if (!user && !isPublic) {
-    // If Supabase is not yet configured with real credentials in dev, allow access to prototype
-    const isMockEnv = !supabaseUrl || supabaseUrl.includes("YOUR_PROJECT_REF");
+    // If Supabase is not yet configured with real credentials, allow access to prototype
+    const isMockEnv =
+      !supabaseUrl ||
+      supabaseUrl.includes("YOUR_PROJECT_REF") ||
+      supabaseUrl.includes("placeholder") ||
+      supabaseUrl.includes("fitforge-demo");
     if (!isMockEnv) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
