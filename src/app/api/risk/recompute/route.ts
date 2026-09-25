@@ -6,6 +6,7 @@ import { evaluateInterventionLadder } from "@/lib/risk/ladder";
 import { generateNudge } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 import { getUsersForRiskRecompute } from "@/lib/queries";
+import { revalidateMetricsTags } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -228,6 +229,8 @@ export async function runRiskRecompute(): Promise<RecomputeSummary> {
     }
   }
 
+  // Invalidate public cached reads so fresh recomputed metrics are reflected immediately
+  revalidateMetricsTags();
 
   return {
     timestamp: now.toISOString(),

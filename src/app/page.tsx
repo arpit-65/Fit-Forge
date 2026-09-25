@@ -1,20 +1,49 @@
+import React, { Suspense } from "react";
+import dynamic from "next/dynamic";
 import HeroCanvasAnimation from "@/components/HeroCanvasAnimation";
-import RiskEngineSection from "@/components/RiskEngineSection";
-import AdaptFeatureSection, {
-  AnalyticsSummaryProps,
-} from "@/components/AdaptFeatureSection";
-import GoalDowngradeShowcase, {
-  GoalDowngradeData,
-} from "@/components/GoalDowngradeShowcase";
-import FinalCTA from "@/components/FinalCTA";
+import {
+  RiskEngineSkeleton,
+  AdaptFeatureSkeleton,
+  GoalDowngradeSkeleton,
+  FinalCTASkeleton,
+  BelowHeroSkeleton,
+} from "@/components/skeletons/LandingPageSkeletons";
 import {
   getFeaturedStudents,
   getAnalyticsSummary,
   getMechanicExample,
 } from "@/lib/queries";
 import { FeaturedStudentProps } from "@/components/RiskCard";
+import { AnalyticsSummaryProps } from "@/components/AdaptFeatureSection";
+import { GoalDowngradeData } from "@/components/GoalDowngradeShowcase";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
+
+// Dynamic imports for all sections below the hero to keep initial JS bundle minimal
+const RiskEngineSection = dynamic(
+  () => import("@/components/RiskEngineSection"),
+  {
+    loading: () => <RiskEngineSkeleton />,
+  },
+);
+
+const AdaptFeatureSection = dynamic(
+  () => import("@/components/AdaptFeatureSection"),
+  {
+    loading: () => <AdaptFeatureSkeleton />,
+  },
+);
+
+const GoalDowngradeShowcase = dynamic(
+  () => import("@/components/GoalDowngradeShowcase"),
+  {
+    loading: () => <GoalDowngradeSkeleton />,
+  },
+);
+
+const FinalCTA = dynamic(() => import("@/components/FinalCTA"), {
+  loading: () => <FinalCTASkeleton />,
+});
 
 // Fallback analytics state in case of connection standby
 const DEFAULT_ANALYTICS: AnalyticsSummaryProps = {
@@ -69,17 +98,10 @@ const DEFAULT_DOWNGRADE_DATA: GoalDowngradeData = {
 };
 
 /**
- * Landing page — Server Component.
- * FitForge: Campus Fitness Dropout Prevention Platform (SIH PS 26196).
- *
- * Ordered Page Architecture (Step 10):
- * 1. Hero (`HeroCanvasAnimation` with 500vh sticky canvas scrollytelling)
- * 2. Risk Cards (`RiskEngineSection` with 5 student personas & hover reveal)
- * 3. Adapt (`AdaptFeatureSection` with SVG scroll dial & live metrics)
- * 4. Goal Downgrade (`GoalDowngradeShowcase` before/after collapse mechanic)
- * 5. Final CTA (`FinalCTA` linking to `/analytics`)
+ * Async Server Component for below-the-hero data fetching.
+ * Streamed via Suspense so Hero paints first without waiting on database IO.
  */
-export default async function LandingPage({
+async function BelowHeroContent({
   searchParams,
 }: {
   searchParams?: { db_error?: string };
@@ -102,19 +124,25 @@ export default async function LandingPage({
     featuredStudents = rawStudents as unknown as FeaturedStudentProps[];
     analytics = rawAnalytics as unknown as AnalyticsSummaryProps;
     if (rawMechanic?.goalDowngradeExample) {
-      downgradeData = rawMechanic.goalDowngradeExample as unknown as GoalDowngradeData;
+      downgradeData =
+        rawMechanic.goalDowngradeExample as unknown as GoalDowngradeData;
     }
   } catch (err: unknown) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "digest" in err &&
+      (err as { digest?: string }).digest === "DYNAMIC_SERVER_USAGE"
+    ) {
+      throw err;
+    }
     console.error("[FitForge] Failed to fetch data for landing page:", err);
     fetchError =
       "Unable to connect to the campus student database right now. The fallback skeleton preview is active.";
   }
 
   return (
-    <div className="relative overflow-hidden bg-[var(--ff-bg-primary)]">
-      {/* 1. Hero: 500vh Scrollytelling Hero Canvas */}
-      <HeroCanvasAnimation />
-
+    <>
       {/* Background glow accents */}
       <div
         className="pointer-events-none absolute inset-0 -z-10"
@@ -125,7 +153,7 @@ export default async function LandingPage({
         <div className="absolute left-0 bottom-0 h-[450px] w-[450px] rounded-full bg-[var(--ff-risk-low)]/5 blur-[130px]" />
       </div>
 
-      {/* 2. Risk Cards: Risk Engine Showcase Section (id="risk-engine") */}
+      {/* 2. Risk Cards: Risk Engine Showcase Section */}
       <RiskEngineSection students={featuredStudents} error={fetchError} />
 
       {/* 3. Adapt: Adapt Feature Section with SVG Risk Dial */}
@@ -136,6 +164,33 @@ export default async function LandingPage({
 
       {/* 5. Final CTA: "Consistency is the real problem. We solved for that." */}
       <FinalCTA />
+    </>
+  );
+}
+
+/**
+ * Landing page — Server Component.
+ * FitForge: Campus Fitness Dropout Prevention Platform (SIH PS 26196).
+ *
+ * Ordered Page Architecture:
+ * 1. Hero (`HeroCanvasAnimation` with 500vh sticky canvas scrollytelling) - PAINTS FIRST
+ * 2. Suspense boundary streaming below-hero sections once data resolves
+ * 3. `next/dynamic` lazy loading for all heavy below-the-hero component JS bundles
+ */
+export default function LandingPage({
+  searchParams,
+}: {
+  searchParams?: { db_error?: string };
+}) {
+  return (
+    <div className="relative overflow-hidden bg-[var(--ff-bg-primary)]">
+      {/* 1. Hero: 500vh Scrollytelling Hero Canvas (Paints immediately!) */}
+      <HeroCanvasAnimation />
+
+      {/* 2-5. Below-the-Hero Sections: Streamed with Suspense Fallback Skeleton */}
+      <Suspense fallback={<BelowHeroSkeleton />}>
+        <BelowHeroContent searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }

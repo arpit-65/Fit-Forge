@@ -14,16 +14,24 @@
     "db:studio": "prisma studio",
     "verify:backend": "tsx -r ./scripts/mock-server-only.cjs scripts/verify-backend.ts",
     "migrate:deploy": "prisma migrate deploy",
-    "seed:prod": "tsx prisma/seed.ts"
+    "seed:prod": "tsx prisma/seed.ts",
+    "generate:frames": "node scripts/generate-frames.js",
+    "setup:mediapipe": "node scripts/setup-mediapipe.cjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "@next/bundle-analyzer": "^16.3.5",
     "@prisma/client": "^6.19.3",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "clsx": "^2.1.1",
     "framer-motion": "^13.4.0",
     "next": "14.2.35",
@@ -31,6 +39,7 @@
     "react": "^18",
     "react-dom": "^18",
     "server-only": "^0.0.1",
+    "three": "^0.186.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -40,6 +49,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
+    "sharp": "^0.35.4",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.19.3",
     "typescript": "^5",

@@ -55,10 +55,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#131A22] border border-[#223040] text-[11px] font-mono text-[#8CA0AD] mb-2">
                 <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-ping" />
-                <span>LIVE ATHLETE PROFILE • NEON DB</span>
+                <span>STUDENT FITNESS & STREAK TRACKING • NEON DB</span>
               </div>
               <h1 className="text-3xl font-bold font-display text-[#EAF2F5]">
-                {student?.name || "Student"} Overview
+                {student?.name || "Student"} — Fitness & Streak Tracking
               </h1>
               <p className="text-xs sm:text-sm text-[#8CA0AD] font-mono mt-0.5">
                 {student?.college?.name} · Roll: {student?.rollNo} · Dept: {student?.department} · Year {student?.year}
@@ -67,6 +67,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
             {/* Interactive Action Buttons */}
             <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href={`/workout${student ? `?studentId=${student.id}` : ""}`}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--ff-accent)]/40 bg-[var(--ff-accent)]/15 hover:bg-[var(--ff-accent)]/25 px-5 py-2.5 text-xs font-bold font-mono text-[var(--ff-accent)] transition-all shadow-lg shadow-[var(--ff-accent)]/10 hover:scale-[1.02]"
+              >
+                <span>📷 AI Camera Studio</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[var(--ff-accent)] text-[#0B0F14] font-bold">
+                  LIVE
+                </span>
+              </Link>
               <RecomputeRiskButton />
               {student && (
                 <WorkoutLogModal userId={student.id} studentName={student.name} />
@@ -120,7 +129,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           {/* Streak */}
           <div className="rounded-2xl border border-[#223040] bg-[#131A22]/90 p-5 shadow-lg flex flex-col justify-between">
             <div>
-              <span className="text-xs font-mono text-[#8CA0AD] block mb-1">ACTIVE STREAK</span>
+              <span className="text-xs font-mono text-[#8CA0AD] block mb-1">🔥 ACTIVE STREAK TRACKING</span>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black font-mono text-[#FFD166]">
                   {student?.streak?.currentStreak ?? 0}

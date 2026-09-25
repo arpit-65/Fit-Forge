@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { RiskBand, InterventionType } from "@prisma/client";
+import { safeUnstableCache, CACHE_TAGS } from "@/lib/cache";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared TypeScript Types for Frontend & Client Components
@@ -757,7 +758,7 @@ const FALLBACK_COLLEGES: CollegeRiskAnalytics[] = [
  * Fetches the 5 featured student personas illustrating the core risk profiles.
  * Safe with fallback return when the database is offline.
  */
-export async function getFeaturedStudents(): Promise<FeaturedStudent[]> {
+async function fetchFeaturedStudentsInternal(): Promise<FeaturedStudent[]> {
   try {
     const featuredNames = [
       "Arpit Sharma",
@@ -914,28 +915,53 @@ export async function getFeaturedStudents(): Promise<FeaturedStudent[]> {
 }
 
 /**
- * Returns overall campus fitness metrics, dropout risk distribution,
- * and intervention statistics.
+ * Public read: Fetches the 5 featured student personas with 60s unstable_cache and cache tags.
  */
-export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
+export const getFeaturedStudents: () => Promise<FeaturedStudent[]> = safeUnstableCache(
+  fetchFeaturedStudentsInternal,
+  ["featured-students"],
+  {
+    revalidate: 60,
+    tags: [CACHE_TAGS.FEATURED_STUDENTS, CACHE_TAGS.PUBLIC_METRICS],
+  }
+);
+
+/**
+ * Internal worker for overall campus fitness metrics.
+ * Runs all independent queries in parallel via Promise.all and database aggregates/groupBy.
+ */
+async function fetchAnalyticsSummaryInternal(): Promise<AnalyticsSummary> {
   try {
-    const totalStudents = await prisma.user.count();
-    const totalActivities = await prisma.activity.count();
-    const totalSquads = await prisma.squad.count();
-    const totalColleges = await prisma.college.count();
-    const interventions = await prisma.intervention.findMany({
-      select: { id: true, type: true, resolvedAt: true },
-    });
-    const allUsersWithRisk = await prisma.user.findMany({
-      select: {
-        id: true,
-        riskScores: {
-          orderBy: { computedAt: "desc" },
-          take: 1,
-          select: { score: true, bootstrapActive: true },
+    const [
+      totalStudents,
+      totalActivities,
+      totalSquads,
+      totalColleges,
+      interventionsByType,
+      activeInterventionsCount,
+      resolvedInterventionsCount,
+      allUsersWithRisk,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.activity.count(),
+      prisma.squad.count(),
+      prisma.college.count(),
+      prisma.intervention.groupBy({
+        by: ["type"],
+        _count: { _all: true },
+      }),
+      prisma.intervention.count({ where: { resolvedAt: null } }),
+      prisma.intervention.count({ where: { NOT: { resolvedAt: null } } }),
+      prisma.user.findMany({
+        select: {
+          riskScores: {
+            orderBy: { computedAt: "desc" },
+            take: 1,
+            select: { score: true, bootstrapActive: true },
+          },
         },
-      },
-    });
+      }),
+    ]);
 
     if (totalStudents === 0) {
       return FALLBACK_ANALYTICS;
@@ -959,8 +985,12 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
       }
     }
 
-    const activeInterventionsCount = interventions.filter((i) => i.resolvedAt === null).length;
-    const resolvedInterventionsCount = interventions.filter((i) => i.resolvedAt !== null).length;
+    const totalInterventions = activeInterventionsCount + resolvedInterventionsCount;
+
+    const typeCountMap: Record<string, number> = {};
+    for (const group of interventionsByType) {
+      typeCountMap[group.type] = group._count._all;
+    }
 
     return {
       cohort: {
@@ -994,14 +1024,14 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
         },
       },
       interventions: {
-        total: interventions.length,
+        total: totalInterventions,
         active: activeInterventionsCount,
         resolved: resolvedInterventionsCount,
         byType: {
-          nudge: interventions.filter((i) => i.type === InterventionType.NUDGE).length,
-          squadNudge: interventions.filter((i) => i.type === InterventionType.SQUAD_NUDGE).length,
-          goalDowngrade: interventions.filter((i) => i.type === InterventionType.GOAL_DOWNGRADE).length,
-          mentorCheckin: interventions.filter((i) => i.type === InterventionType.MENTOR_CHECKIN).length,
+          nudge: typeCountMap[InterventionType.NUDGE] || 0,
+          squadNudge: typeCountMap[InterventionType.SQUAD_NUDGE] || 0,
+          goalDowngrade: typeCountMap[InterventionType.GOAL_DOWNGRADE] || 0,
+          mentorCheckin: typeCountMap[InterventionType.MENTOR_CHECKIN] || 0,
         },
       },
     };
@@ -1012,88 +1042,101 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
 }
 
 /**
- * Returns a detailed case example illustrating dropout prevention mechanics:
- * Specifically Ritika Bisht's complete risk jump -> intervention -> recovery arc.
+ * Public read: Overall campus fitness metrics, dropout risk distribution,
+ * and intervention statistics with 60s unstable_cache and cache tags.
  */
-export async function getMechanicExample(): Promise<MechanicExample> {
+export const getAnalyticsSummary: () => Promise<AnalyticsSummary> = safeUnstableCache(
+  fetchAnalyticsSummaryInternal,
+  ["analytics-summary"],
+  {
+    revalidate: 60,
+    tags: [CACHE_TAGS.ANALYTICS_SUMMARY, CACHE_TAGS.PUBLIC_METRICS],
+  }
+);
+
+/**
+ * Internal worker for dropout prevention mechanics case example.
+ * Queries Ritika, Pankaj, and Apoorav in parallel via Promise.all.
+ */
+async function fetchMechanicExampleInternal(): Promise<MechanicExample> {
   try {
-    const ritika = await prisma.user.findFirst({
-      where: { name: "Ritika Bisht" },
-      select: {
-        name: true,
-        college: { select: { name: true } },
-        squadMemberships: {
-          select: { squad: { select: { name: true } } },
-        },
-        riskScores: {
-          orderBy: { computedAt: "asc" },
-          select: {
-            score: true,
-            band: true,
-            topReason: true,
-            computedAt: true,
+    const [ritika, pankaj, apoorav] = await Promise.all([
+      prisma.user.findFirst({
+        where: { name: "Ritika Bisht" },
+        select: {
+          name: true,
+          college: { select: { name: true } },
+          squadMemberships: {
+            select: { squad: { select: { name: true } } },
+          },
+          riskScores: {
+            orderBy: { computedAt: "asc" },
+            select: {
+              score: true,
+              band: true,
+              topReason: true,
+              computedAt: true,
+            },
+          },
+          interventions: {
+            orderBy: { firedAt: "desc" },
+            select: {
+              type: true,
+              message: true,
+              firedAt: true,
+              resolvedAt: true,
+            },
+          },
+          _count: {
+            select: { activities: true },
           },
         },
-        interventions: {
-          orderBy: { firedAt: "desc" },
-          select: {
-            type: true,
-            message: true,
-            firedAt: true,
-            resolvedAt: true,
+      }),
+      prisma.user.findFirst({
+        where: { name: "Pankaj Negi" },
+        select: {
+          name: true,
+          interventions: {
+            where: { resolvedAt: null },
+            select: {
+              id: true,
+              type: true,
+              message: true,
+              firedAt: true,
+            },
+          },
+          riskScores: {
+            orderBy: { computedAt: "desc" },
+            take: 1,
+            select: { score: true },
           },
         },
-        _count: {
-          select: { activities: true },
-        },
-      },
-    });
-
-    const pankaj = await prisma.user.findFirst({
-      where: { name: "Pankaj Negi" },
-      select: {
-        name: true,
-        interventions: {
-          where: { resolvedAt: null },
-          select: {
-            id: true,
-            type: true,
-            message: true,
-            firedAt: true,
+      }),
+      prisma.user.findFirst({
+        where: { name: "Apoorav Mehta" },
+        select: {
+          name: true,
+          college: { select: { name: true } },
+          challenges: {
+            select: { challenge: { select: { title: true } } },
+          },
+          interventions: {
+            where: { type: InterventionType.GOAL_DOWNGRADE },
+            orderBy: { firedAt: "desc" },
+            select: {
+              id: true,
+              type: true,
+              message: true,
+              firedAt: true,
+            },
+          },
+          riskScores: {
+            orderBy: { computedAt: "desc" },
+            select: { score: true, topReason: true },
           },
         },
-        riskScores: {
-          orderBy: { computedAt: "desc" },
-          take: 1,
-          select: { score: true },
-        },
-      },
-    });
-
-    const apoorav = await prisma.user.findFirst({
-      where: { name: "Apoorav Mehta" },
-      select: {
-        name: true,
-        college: { select: { name: true } },
-        challenges: {
-          select: { challenge: { select: { title: true } } },
-        },
-        interventions: {
-          where: { type: InterventionType.GOAL_DOWNGRADE },
-          orderBy: { firedAt: "desc" },
-          select: {
-            id: true,
-            type: true,
-            message: true,
-            firedAt: true,
-          },
-        },
-        riskScores: {
-          orderBy: { computedAt: "desc" },
-          select: { score: true, topReason: true },
-        },
-      },
-    });
+      }),
+    ]);
 
     if (!ritika || !apoorav) {
       return FALLBACK_MECHANIC;
@@ -1177,9 +1220,22 @@ export async function getMechanicExample(): Promise<MechanicExample> {
 }
 
 /**
- * Returns risk, engagement, and dropout prevention analytics grouped by college.
+ * Public read: Case example illustrating dropout prevention mechanics
+ * with 60s unstable_cache and cache tags.
  */
-export async function getCollegeRiskAnalytics(): Promise<CollegeRiskAnalytics[]> {
+export const getMechanicExample: () => Promise<MechanicExample> = safeUnstableCache(
+  fetchMechanicExampleInternal,
+  ["mechanic-example"],
+  {
+    revalidate: 60,
+    tags: [CACHE_TAGS.MECHANIC_EXAMPLE, CACHE_TAGS.PUBLIC_METRICS],
+  }
+);
+
+/**
+ * Internal worker for college risk analytics.
+ */
+async function fetchCollegeRiskAnalyticsInternal(): Promise<CollegeRiskAnalytics[]> {
   try {
     const colleges = await prisma.college.findMany({
       select: {
@@ -1255,6 +1311,19 @@ export async function getCollegeRiskAnalytics(): Promise<CollegeRiskAnalytics[]>
     return FALLBACK_COLLEGES;
   }
 }
+
+/**
+ * Public read: Risk, engagement, and dropout prevention analytics grouped by college
+ * with 60s unstable_cache and cache tags.
+ */
+export const getCollegeRiskAnalytics: () => Promise<CollegeRiskAnalytics[]> = safeUnstableCache(
+  fetchCollegeRiskAnalyticsInternal,
+  ["college-analytics"],
+  {
+    revalidate: 60,
+    tags: [CACHE_TAGS.COLLEGE_ANALYTICS, CACHE_TAGS.PUBLIC_METRICS],
+  }
+);
 
 /**
  * Returns lightweight student summaries for student switchers and selectors.

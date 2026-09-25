@@ -41,10 +41,20 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Custom scrollbar */
+  /* Text selection */
+  ::selection {
+    background-color: var(--ff-accent);
+    color: #ffffff;
+  }
+  ::-moz-selection {
+    background-color: var(--ff-accent);
+    color: #ffffff;
+  }
+
+  /* Custom scrollbar (WebKit) */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -53,41 +63,112 @@
 
   ::-webkit-scrollbar-thumb {
     background: var(--ff-border);
-    border-radius: 4px;
+    border-radius: 999px;
+    transition: background 0.2s;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: var(--ff-accent);
+    box-shadow: 0 0 8px rgba(79, 156, 143, 0.5);
   }
 
-  /* Firefox scrollbar support */
+  /* Firefox scrollbar */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--ff-border) var(--ff-bg-primary);
   }
 }
 
+/* Ambient Glow Keyframes */
+@keyframes orb-pulse-accent {
+  0%, 100% { opacity: 0.12; transform: scale(1) translate(0, 0); }
+  33%       { opacity: 0.20; transform: scale(1.08) translate(-20px, 12px); }
+  66%       { opacity: 0.14; transform: scale(0.95) translate(16px, -10px); }
+}
+
+@keyframes orb-pulse-gold {
+  0%, 100% { opacity: 0.08; transform: scale(1) translate(0, 0); }
+  40%       { opacity: 0.16; transform: scale(1.1) translate(18px, -14px); }
+  70%       { opacity: 0.10; transform: scale(0.93) translate(-12px, 8px); }
+}
+
+@keyframes orb-rotate-slow {
+  from { transform: rotate(0deg) scale(1.05); }
+  to   { transform: rotate(360deg) scale(1.05); }
+}
+
 @layer utilities {
+  /* Ambient orbs */
+  .ambient-orb-accent {
+    position: absolute;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(79, 156, 143, 0.55) 0%, transparent 70%);
+    filter: blur(80px);
+    pointer-events: none;
+    animation: orb-pulse-accent 18s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  .ambient-orb-gold {
+    position: absolute;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(255, 209, 102, 0.45) 0%, transparent 70%);
+    filter: blur(100px);
+    pointer-events: none;
+    animation: orb-pulse-gold 22s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  .ambient-orb-ring {
+    position: absolute;
+    border-radius: 9999px;
+    border: 1px solid rgba(79, 156, 143, 0.12);
+    pointer-events: none;
+    animation: orb-rotate-slow 40s linear infinite;
+    will-change: transform;
+  }
+
+  /* Section gradient blends — place between sections to avoid hard cuts */
+  .section-blend {
+    height: 80px;
+    background: linear-gradient(
+      to bottom,
+      var(--ff-bg-primary) 0%,
+      transparent 50%,
+      var(--ff-bg-primary) 100%
+    );
+    pointer-events: none;
+  }
+
+  .section-blend-surface {
+    height: 80px;
+    background: linear-gradient(
+      to bottom,
+      var(--ff-bg-secondary) 0%,
+      var(--ff-bg-primary) 100%
+    );
+    pointer-events: none;
+  }
+
   .text-balance {
     text-wrap: balance;
   }
 
-  /* Playfair Display font utility for hero headline and section titles ONLY */
   .font-display {
     font-family: var(--font-playfair), Georgia, serif;
   }
 
   /* Glow effects */
   .glow-accent {
-    box-shadow: 0 0 20px rgba(79, 156, 143, 0.4);
+    box-shadow: 0 0 24px rgba(79, 156, 143, 0.4);
   }
 
   .glow-brand {
-    box-shadow: 0 0 20px rgba(79, 156, 143, 0.4);
+    box-shadow: 0 0 24px rgba(79, 156, 143, 0.4);
   }
 
   .glow-gold {
-    box-shadow: 0 0 20px rgba(255, 209, 102, 0.4);
+    box-shadow: 0 0 24px rgba(255, 209, 102, 0.4);
   }
 
   /* Glass card */
@@ -98,9 +179,24 @@
     border: 1px solid var(--ff-border);
   }
 
+  /* Deep glass */
+  .glass-deep {
+    background: rgba(11, 15, 20, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(34, 48, 64, 0.7);
+  }
+
   /* Gradient text */
   .gradient-text {
     background: linear-gradient(135deg, #EAF2F5 0%, #4F9C8F 60%, #FFD166 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-gold {
+    background: linear-gradient(135deg, #FFD166 0%, #F5A623 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -112,7 +208,7 @@
     background-color: rgba(34, 48, 64, 0.6);
   }
 
-  /* Keyboard focus ring — visible on focus-visible, hidden on click */
+  /* Keyboard focus ring */
   .focus-ring {
     @apply outline-none;
   }
@@ -121,12 +217,22 @@
     outline-offset: 3px;
     border-radius: 4px;
   }
+
+  /* Shared card shadow scale */
+  .shadow-card-sm     { box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+  .shadow-card-md     { box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+  .shadow-card-lg     { box-shadow: 0 8px 48px rgba(0,0,0,0.65); }
+  .shadow-card-accent { box-shadow: 0 0 32px rgba(79,156,143,0.18); }
+  .shadow-card-gold   { box-shadow: 0 0 32px rgba(255,209,102,0.15); }
+
+  /* Accent border glow (hover) */
+  .border-glow-accent {
+    border-color: var(--ff-accent);
+    box-shadow: 0 0 0 1px rgba(79, 156, 143, 0.3), 0 0 16px rgba(79, 156, 143, 0.15);
+  }
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Accessibility: Global reduced-motion overrides
-   Per WCAG 2.1 SC 2.3.3 — pause/stop all decorative animations
-   ───────────────────────────────────────────────────────────────────────────── */
+/* Accessibility: reduced-motion overrides */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -139,5 +245,12 @@
 
   html {
     scroll-behavior: auto;
+  }
+
+  .ambient-orb-accent,
+  .ambient-orb-gold,
+  .ambient-orb-ring {
+    animation: none !important;
+    opacity: 0.06 !important;
   }
 }

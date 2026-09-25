@@ -6,7 +6,7 @@ import {
   getCollegeRiskAnalytics,
 } from "@/lib/queries";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 // Fallback data in case of connection standby
 const DEFAULT_ANALYTICS = {
@@ -131,7 +131,10 @@ export default async function AnalyticsPage({
     if (rawAnalytics) analytics = rawAnalytics as typeof DEFAULT_ANALYTICS;
     if (rawMechanic) mechanic = rawMechanic;
     if (rawColleges && rawColleges.length > 0) colleges = rawColleges;
-  } catch (err) {
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "digest" in err && (err as { digest?: string }).digest === "DYNAMIC_SERVER_USAGE") {
+      throw err;
+    }
     console.error("[FitForge Analytics] DB fetch error:", err);
     isStandby = true;
   }

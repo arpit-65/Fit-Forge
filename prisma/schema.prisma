@@ -75,6 +75,8 @@ model User {
   badges            Badge[]
   leagueMemberships LeagueMember[]
 
+  @@index([name])
+  @@index([collegeId])
   @@map("users")
 }
 
@@ -123,6 +125,7 @@ model Activity {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+  @@index([date])
   @@map("activities")
 }
 
@@ -156,6 +159,7 @@ model ChallengeParticipant {
   challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
 
   @@id([userId, challengeId])
+  @@index([challengeId])
   @@map("challenge_participants")
 }
 
@@ -183,6 +187,8 @@ model RiskScore {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, computedAt])
+  @@index([computedAt])
+  @@index([band])
   @@map("risk_scores")
 }
 
@@ -199,6 +205,8 @@ model Intervention {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, firedAt])
+  @@index([resolvedAt])
+  @@index([type])
   @@map("interventions")
 }
 

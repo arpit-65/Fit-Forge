@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 export default function FinalCTA() {
   return (
@@ -19,7 +19,7 @@ export default function FinalCTA() {
       </div>
 
       <div className="max-w-5xl mx-auto">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -98,7 +98,7 @@ export default function FinalCTA() {
               <span className="text-xs font-mono uppercase tracking-wider text-[#8CA0AD]">Broken Streaks Guilt</span>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

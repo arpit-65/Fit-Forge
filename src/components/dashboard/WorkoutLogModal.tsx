@@ -77,7 +77,7 @@ export default function WorkoutLogModal({ userId, studentName }: WorkoutLogModal
         className="inline-flex items-center gap-2 rounded-full bg-[#4F9C8F] hover:bg-[#5db4a5] px-5 py-2.5 text-xs font-bold text-[#0B0F14] transition-all shadow-lg shadow-[#4F9C8F]/25 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
       >
         <span className="text-base leading-none">＋</span>
-        <span>Log Workout Session</span>
+        <span>Track Workout & Streak</span>
       </button>
 
       {isOpen && (

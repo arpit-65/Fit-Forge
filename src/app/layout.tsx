@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/nav/Navbar";
+import { MotionProvider } from "@/components/MotionProvider";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Inter for body and general UI
 const inter = Inter({
@@ -110,8 +113,12 @@ export default function RootLayout({
           className="relative min-h-[calc(100vh-4rem)]"
           tabIndex={-1}
         >
-          {children}
+          <MotionProvider>{children}</MotionProvider>
         </main>
+
+        {/* Real-time Vercel Analytics & Web Vitals tracking */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

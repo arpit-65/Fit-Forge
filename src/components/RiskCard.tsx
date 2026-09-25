@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 
 export interface FeaturedStudentProps {
   id: string;
@@ -240,7 +240,7 @@ export default function RiskCard({ student }: RiskCardProps) {
 
         <AnimatePresence>
           {isRevealed && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, height: 0, marginTop: 0 }}
               animate={{ opacity: 1, height: "auto", marginTop: 12 }}
               exit={{ opacity: 0, height: 0, marginTop: 0 }}
@@ -306,7 +306,7 @@ export default function RiskCard({ student }: RiskCardProps) {
                   Open {student.name.split(" ")[0]}&apos;s Athlete Dashboard →
                 </Link>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>

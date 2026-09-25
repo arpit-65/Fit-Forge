@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getSquadsPageData } from "@/lib/queries";
 import InteractiveSquadsGrid from "@/components/squads/InteractiveSquadsGrid";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 interface SquadsPageProps {
   searchParams?: {

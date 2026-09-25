@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import {
-  motion,
+  m,
   useScroll,
   useSpring,
   useTransform,
@@ -279,7 +279,7 @@ function SvgRiskDial({ progress, analytics }: SvgRiskDialProps) {
           />
 
           {/* Animated Sweeping Arc */}
-          <motion.path
+          <m.path
             d={`M ${center - radius} ${center} A ${radius} ${radius} 0 0 1 ${center + radius} ${center}`}
             fill="none"
             stroke={arcStroke}
@@ -311,7 +311,7 @@ function SvgRiskDial({ progress, analytics }: SvgRiskDialProps) {
           })}
 
           {/* Center Needle Pivot */}
-          <motion.g
+          <m.g
             style={{
               originX: `${center}px`,
               originY: `${center}px`,
@@ -329,7 +329,7 @@ function SvgRiskDial({ progress, analytics }: SvgRiskDialProps) {
             />
             <circle cx={center} cy={center} r={7} fill="#EAF2F5" />
             <circle cx={center} cy={center} r={3} fill="#0B0F14" />
-          </motion.g>
+          </m.g>
         </svg>
       </div>
 
@@ -413,7 +413,7 @@ function FeatureTextCard({
   badgeColor,
 }: FeatureTextCardProps) {
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
@@ -439,7 +439,7 @@ function FeatureTextCard({
         <span className="text-[var(--ff-text-secondary)]">Logic: </span>
         {codeAnchor}
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -463,7 +463,7 @@ function FeatureStatCard({
   stats,
 }: FeatureStatCardProps) {
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
@@ -494,6 +494,6 @@ function FeatureStatCard({
           </div>
         ))}
       </div>
-    </motion.div>
+    </m.div>
   );
 }

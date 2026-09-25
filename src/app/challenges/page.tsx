@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getChallengesPageData } from "@/lib/queries";
 import InteractiveChallengesGrid from "@/components/challenges/InteractiveChallengesGrid";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 interface ChallengesPageProps {
   searchParams?: {

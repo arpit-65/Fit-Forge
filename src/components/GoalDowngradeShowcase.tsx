@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { motion, useInView } from "framer-motion";
+import { m, useInView } from "framer-motion";
 
 export interface GoalDowngradeData {
   student?: string;
@@ -128,7 +128,7 @@ export default function GoalDowngradeShowcase({
       <div className="max-w-6xl mx-auto">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -139,9 +139,9 @@ export default function GoalDowngradeShowcase({
             <span className="text-[11px] font-mono tracking-widest uppercase text-[#8CA0AD]">
               THE RETENTION MECHANIC • ZERO GUILT
             </span>
-          </motion.div>
+          </m.div>
 
-          <motion.h2
+          <m.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -149,9 +149,9 @@ export default function GoalDowngradeShowcase({
             className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#EAF2F5] font-display mb-6"
           >
             When Habit Resistance Spikes, The Target Collapses
-          </motion.h2>
+          </m.h2>
 
-          <motion.p
+          <m.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -160,11 +160,11 @@ export default function GoalDowngradeShowcase({
           >
             Every other fitness tracker shames students with broken streaks when exam season or fatigue hits.
             FitForge deterministically lowers the threshold before dropout happens.
-          </motion.p>
+          </m.p>
         </div>
 
         {/* ─── THE MAIN BEFORE / AFTER PANEL (MOST WEIGHT ON PAGE) ─── */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, scale: 0.96, y: 30 }}
           whileInView={{ opacity: 1, scale: 1, y: 0 }}
           viewport={{ once: true }}
@@ -288,14 +288,10 @@ export default function GoalDowngradeShowcase({
 
             {/* ── CENTER ADAPTIVE ENGINE CONDUIT BADGE ── */}
             <div className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex-col items-center pointer-events-none">
-              <motion.div
+              <m.div
                 animate={{
                   scale: [1, 1.06, 1],
-                  boxShadow: [
-                    "0 0 20px rgba(79,156,143,0.3)",
-                    "0 0 35px rgba(46,204,113,0.5)",
-                    "0 0 20px rgba(79,156,143,0.3)",
-                  ],
+                  opacity: [0.85, 1, 0.85],
                 }}
                 transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
                 className="w-16 h-16 rounded-2xl bg-[#131A22] border-2 border-[#4F9C8F] flex items-center justify-center shadow-2xl"
@@ -313,7 +309,7 @@ export default function GoalDowngradeShowcase({
                     d="M13 7l5 5m0 0l-5 5m5-5H6"
                   />
                 </svg>
-              </motion.div>
+              </m.div>
               <div className="mt-2 px-2.5 py-1 rounded bg-[#0B0F14] border border-[#223040] text-[10px] font-mono uppercase tracking-widest text-[#8CA0AD] shadow-md whitespace-nowrap">
                 Engine Auto-Shift
               </div>
@@ -537,10 +533,10 @@ export default function GoalDowngradeShowcase({
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* ─── MANDATORY SIGNATURE CALLOUT UNDER PANEL ─── */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -559,7 +555,7 @@ export default function GoalDowngradeShowcase({
             Zero workout days are prevented not by guilt, but by making showing up
             frictionless. Habit momentum is preserved at all costs.
           </p>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

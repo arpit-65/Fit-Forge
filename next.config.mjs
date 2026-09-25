@@ -1,3 +1,9 @@
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // FitForge — Server-rendered Next.js 14 App Router (not static export)
@@ -61,4 +67,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

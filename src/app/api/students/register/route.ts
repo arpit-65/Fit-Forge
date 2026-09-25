@@ -56,6 +56,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if rollNo is already taken by a different user
+    const existingByRoll = await prisma.user.findUnique({
+      where: { rollNo },
+    });
+
+    if (existingByRoll && existingByRoll.email.toLowerCase() !== email.toLowerCase()) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "CONFLICT",
+            message: `Roll number "${rollNo}" is already registered to another email (${existingByRoll.email}). Please use your registered email or check your roll number.`,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
     // Upsert student record
     const user = await prisma.user.upsert({
       where: { email },
