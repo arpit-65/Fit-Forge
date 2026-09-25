@@ -22,8 +22,20 @@ const playfair = Playfair_Display({
   preload: true,
 });
 
+const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ?? "https://fitforge.vercel.app";
+  (rawAppUrl && rawAppUrl.length > 0)
+    ? rawAppUrl
+    : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://fitforge.vercel.app";
+
+let safeMetadataBase: URL;
+try {
+  safeMetadataBase = new URL(APP_URL.startsWith("http") ? APP_URL : `https://${APP_URL}`);
+} catch {
+  safeMetadataBase = new URL("https://fitforge.vercel.app");
+}
 
 export const metadata: Metadata = {
   title: {
@@ -41,7 +53,7 @@ export const metadata: Metadata = {
     "student wellness",
     "fitness tracker",
   ],
-  metadataBase: new URL(APP_URL),
+  metadataBase: safeMetadataBase,
   // Open Graph (social preview cards)
   openGraph: {
     title: "FitForge — Campus Fitness Dropout Prevention",
