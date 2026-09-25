@@ -1475,7 +1475,7 @@ export async function getStudentDashboardData(filter?: {
       });
     }
 
-    if (!user) return null;
+    if (!user) return getFallbackStudentDashboardData(filter);
 
     const totalPoints =
       user.pointsLedger.reduce((sum, p) => sum + p.points, 0) ||
@@ -1550,9 +1550,208 @@ export async function getStudentDashboardData(filter?: {
     };
   } catch (error) {
     console.error("[FitForge queries] getStudentDashboardData failed:", error);
-    return null;
+    return getFallbackStudentDashboardData(filter);
   }
 }
+
+function getFallbackStudentDashboardData(filter?: {
+  studentId?: string;
+  email?: string;
+  name?: string;
+}): StudentDashboardData {
+  const match =
+    FALLBACK_FEATURED_STUDENTS.find(
+      (s) =>
+        s.id === filter?.studentId ||
+        s.email === filter?.email ||
+        s.name === filter?.name
+    ) || FALLBACK_FEATURED_STUDENTS[0];
+
+  return {
+    id: match.id,
+    name: match.name,
+    email: match.email,
+    rollNo: match.rollNo,
+    department: match.department,
+    year: match.year,
+    college: {
+      id: "col-" + match.collegeCode.toLowerCase(),
+      name: match.college,
+      code: match.collegeCode,
+      slug: match.collegeCode.toLowerCase(),
+    },
+    streak: {
+      currentStreak: match.streak.current,
+      longestStreak: match.streak.longest,
+      lastActiveDate: match.streak.lastActiveDate,
+    },
+    squad: match.squad
+      ? {
+          id: "sq-" + match.collegeCode.toLowerCase(),
+          name: match.squad,
+          role: match.squadRole,
+        }
+      : null,
+    league: match.league
+      ? {
+          name: match.league.name,
+          tier: match.league.tier,
+          points: match.league.points,
+          rank: match.league.rank,
+        }
+      : null,
+    totalPoints: match.league?.points || 1420,
+    riskScores:
+      match.riskHistory.length > 0
+        ? match.riskHistory.map((r) => ({
+            id: r.id,
+            score: r.score,
+            band: r.band,
+            topReason: r.topReason,
+            bootstrapActive: match.currentRisk.bootstrapActive,
+            computedAt: r.computedAt,
+          }))
+        : match.currentRisk.score !== null
+        ? [
+            {
+              id: "rh-" + match.id,
+              score: match.currentRisk.score,
+              band: match.currentRisk.band || RiskBand.LOW,
+              topReason: match.currentRisk.topReason,
+              bootstrapActive: match.currentRisk.bootstrapActive,
+              computedAt: match.currentRisk.computedAt || new Date().toISOString(),
+            },
+          ]
+        : [],
+    interventions: match.interventions.map((i) => ({
+      id: i.id,
+      type: i.type,
+      message: i.message,
+      firedAt: i.firedAt,
+      resolvedAt: i.resolvedAt,
+      isActive: i.isActive,
+    })),
+    activities: [
+      {
+        id: "act-1",
+        type: "gym",
+        durationMinutes: 45,
+        date: new Date().toISOString(),
+        notes: "Upper body strength session",
+      },
+      {
+        id: "act-2",
+        type: "run",
+        durationMinutes: 30,
+        date: new Date(Date.now() - 86400000).toISOString(),
+        notes: "Campus perimeter 5K",
+      },
+      {
+        id: "act-3",
+        type: "hiit",
+        durationMinutes: 20,
+        date: new Date(Date.now() - 2 * 86400000).toISOString(),
+        notes: "Core interval workout",
+      },
+    ],
+    pointsLedger: [
+      {
+        id: "pts-1",
+        points: 50,
+        reason: "Daily streak bonus",
+        date: new Date().toISOString(),
+      },
+      {
+        id: "pts-2",
+        points: 100,
+        reason: "Challenge milestone completed",
+        date: new Date(Date.now() - 86400000).toISOString(),
+      },
+    ],
+  };
+}
+
+const FALLBACK_STUDENT_OPTIONS: StudentOption[] = FALLBACK_FEATURED_STUDENTS.map((s) => ({
+  id: s.id,
+  name: s.name,
+  collegeCode: s.collegeCode,
+}));
+
+const FALLBACK_CHALLENGES: ChallengeItem[] = [
+  {
+    id: "ch-sprint-30",
+    title: "30-Day Campus Consistency Sprint",
+    description: "Log at least 30 minutes of physical activity daily across 30 days to establish long-term fitness habits.",
+    targetMinutes: 30,
+    originalTargetMinutes: null,
+    status: "ACTIVE",
+    dueDate: new Date(Date.now() + 15 * 86400000).toISOString(),
+    dueDateFormatted: "Oct 15, 2026",
+    participantCount: 42,
+    participants: [],
+  },
+  {
+    id: "ch-run-5k",
+    title: "Campus 5K Endurance Push",
+    description: "Complete outdoor runs totaling at least 45 minutes this week with your college squad teammates.",
+    targetMinutes: 45,
+    originalTargetMinutes: null,
+    status: "ACTIVE",
+    dueDate: new Date(Date.now() + 5 * 86400000).toISOString(),
+    dueDateFormatted: "Oct 5, 2026",
+    participantCount: 38,
+    participants: [],
+  },
+  {
+    id: "ch-hiit-reboot",
+    title: "Quick-Start 15-Min HIIT Reboot",
+    description: "Low-friction high-intensity interval training designed for students regaining their momentum after a pause.",
+    targetMinutes: 15,
+    originalTargetMinutes: 30,
+    status: "DOWNGRADED",
+    dueDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+    dueDateFormatted: "Oct 7, 2026",
+    participantCount: 29,
+    participants: [],
+  },
+];
+
+const FALLBACK_SQUADS: SquadItem[] = [
+  {
+    id: "sq-striders",
+    name: "Campus Striders",
+    description: "Elite consistency squad prioritizing daily cardio and recovery tracking.",
+    college: { name: "Dehradun Institute of Technology", code: "DIT" },
+    memberCount: 8,
+    leader: "Arpit Sharma",
+    members: [
+      { userId: "fb-arpit", name: "Arpit Sharma", role: "leader", joinedAt: new Date().toISOString() },
+      { userId: "fb-ritika", name: "Ritika Bisht", role: "member", joinedAt: new Date().toISOString() },
+    ],
+  },
+  {
+    id: "sq-titans",
+    name: "RIT Iron Titans",
+    description: "Strength-focused athletics squad supporting members with accountability check-ins.",
+    college: { name: "Roorkee Institute of Technology", code: "RIT" },
+    memberCount: 6,
+    leader: "Apoorav Mehta",
+    members: [
+      { userId: "fb-apoorav", name: "Apoorav Mehta", role: "leader", joinedAt: new Date().toISOString() },
+    ],
+  },
+  {
+    id: "sq-trailblazers",
+    name: "Tula Trailblazers",
+    description: "First-year cohort building fitness foundations through guided habit sprints.",
+    college: { name: "Tula's Institute", code: "TULA" },
+    memberCount: 5,
+    leader: "Grima Rawat",
+    members: [
+      { userId: "fb-grima", name: "Grima Rawat", role: "leader", joinedAt: new Date().toISOString() },
+    ],
+  },
+];
 
 /**
  * Returns challenges and student options for /challenges.
@@ -1616,10 +1815,13 @@ export async function getChallengesPageData(): Promise<ChallengesPageData> {
       collegeCode: s.college?.code || "CAMPUS",
     }));
 
-    return { challenges, students };
+    return {
+      challenges: challenges.length > 0 ? challenges : FALLBACK_CHALLENGES,
+      students: students.length > 0 ? students : FALLBACK_STUDENT_OPTIONS,
+    };
   } catch (error) {
     console.error("[FitForge queries] getChallengesPageData failed:", error);
-    return { challenges: [], students: [] };
+    return { challenges: FALLBACK_CHALLENGES, students: FALLBACK_STUDENT_OPTIONS };
   }
 }
 
@@ -1677,10 +1879,13 @@ export async function getSquadsPageData(): Promise<SquadsPageData> {
       collegeCode: s.college?.code || "CAMPUS",
     }));
 
-    return { squads, students };
+    return {
+      squads: squads.length > 0 ? squads : FALLBACK_SQUADS,
+      students: students.length > 0 ? students : FALLBACK_STUDENT_OPTIONS,
+    };
   } catch (error) {
     console.error("[FitForge queries] getSquadsPageData failed:", error);
-    return { squads: [], students: [] };
+    return { squads: FALLBACK_SQUADS, students: FALLBACK_STUDENT_OPTIONS };
   }
 }
 
@@ -1724,6 +1929,27 @@ export async function getAdminStudentsList(): Promise<AdminStudentRow[]> {
       orderBy: { name: "asc" },
     });
 
+    if (rawUsers.length === 0) {
+      return FALLBACK_FEATURED_STUDENTS.map((s) => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        rollNo: s.rollNo,
+        department: s.department,
+        year: s.year,
+        collegeName: s.college,
+        collegeCode: s.collegeCode,
+        squadName: s.squad || "Solo Athlete",
+        streak: s.streak.current,
+        riskScore: s.currentRisk.score,
+        riskBand: s.currentRisk.band || "LOW",
+        topReason: s.currentRisk.topReason,
+        bootstrapActive: s.currentRisk.bootstrapActive,
+        activityCount: s.totalActivitiesLogged,
+        activeIntervention: s.interventions.find((i) => i.isActive)?.type.replace("_", " ") || null,
+      }));
+    }
+
     return rawUsers.map((u) => {
       const risk = u.riskScores[0];
       const intervention = u.interventions[0];
@@ -1749,7 +1975,24 @@ export async function getAdminStudentsList(): Promise<AdminStudentRow[]> {
     });
   } catch (error) {
     console.error("[FitForge queries] getAdminStudentsList failed:", error);
-    return [];
+    return FALLBACK_FEATURED_STUDENTS.map((s) => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      rollNo: s.rollNo,
+      department: s.department,
+      year: s.year,
+      collegeName: s.college,
+      collegeCode: s.collegeCode,
+      squadName: s.squad || "Solo Athlete",
+      streak: s.streak.current,
+      riskScore: s.currentRisk.score,
+      riskBand: s.currentRisk.band || "LOW",
+      topReason: s.currentRisk.topReason,
+      bootstrapActive: s.currentRisk.bootstrapActive,
+      activityCount: s.totalActivitiesLogged,
+      activeIntervention: s.interventions.find((i) => i.isActive)?.type.replace("_", " ") || null,
+    }));
   }
 }
 

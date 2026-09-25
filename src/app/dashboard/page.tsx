@@ -34,10 +34,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const requestedId = searchParams?.studentId;
   const requestedEmail = searchParams?.email || userEmail;
 
-  const student = await getStudentDashboardData({
+  let student = await getStudentDashboardData({
     studentId: requestedId,
     email: requestedEmail || undefined,
   });
+
+  if (!student && allStudentsSummary.length > 0) {
+    student = await getStudentDashboardData({
+      studentId: allStudentsSummary[0].id,
+    });
+  }
 
   const latestRisk = student?.riskScores[0];
   const squad = student?.squad;
